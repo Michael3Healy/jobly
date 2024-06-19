@@ -49,7 +49,36 @@ class Company {
    * Returns [{ handle, name, description, numEmployees, logoUrl }, ...]
    * */
 
-  static async findAll() {
+  static async find(filters = {}) {
+
+    const { minEmployees, maxEmployees, name } = filters;
+    if (minEmployees > maxEmployees) {
+      throw new BadRequestError("Min employees cannot be greater than max")
+    }
+
+    // create a where clause based on the filters
+    let cols = []
+    const values = []
+
+    // if each filter is present, add to the where clause
+    if (minEmployees) {
+      values.push(minEmployees)
+      cols.push(`num_employees >= $${values.length}`)
+    }
+    if (maxEmployees) {
+      values.push(maxEmployees)
+      cols.push(`num_employees <= $${values.length}`)
+    }
+    if (name) {
+      values.push(`%${name}%`)
+      cols.push(`name ILIKE $${values.length}`)
+    }
+
+    // join the where clause
+    cols = cols.join(' AND ')
+
+    // if there are filters, add the where clause, otherwise add a default where clause to return all companies
+    const whereClause = cols ? `WHERE ${cols}` : 'WHERE 1=1'
     const companiesRes = await db.query(
           `SELECT handle,
                   name,
@@ -57,7 +86,8 @@ class Company {
                   num_employees AS "numEmployees",
                   logo_url AS "logoUrl"
            FROM companies
-           ORDER BY name`);
+           ${whereClause}
+           ORDER BY name`, [...values]);
     return companiesRes.rows;
   }
 
