@@ -2,6 +2,7 @@
 
 const db = require("../db");
 const bcrypt = require("bcrypt");
+const generatePassword = require('generate-password');
 const { sqlForPartialUpdate } = require("../helpers/sql");
 const {
   NotFoundError,
@@ -245,6 +246,20 @@ class User {
         INSERT INTO applications (username, job_id)
         VALUES ($1, $2)`,
       [username, jobId])
+  }
+
+  /** Generate a random password 
+   */
+
+  static generatePassword() {
+    const password = generatePassword.generate({
+      length: 12, // Length of the password
+      numbers: true, // Include numbers
+      symbols: true, // Include symbols
+      uppercase: true, // Include uppercase letters
+      lowercase: true // Include lowercase letters
+    });
+    return password
   }
 }
 
