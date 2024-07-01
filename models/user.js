@@ -116,8 +116,8 @@ class User {
 
   /** Given a username, return data about user.
    *
-   * Returns { username, first_name, last_name, is_admin, jobs }
-   *   where jobs is { id, title, company_handle, company_name, state }
+   * Returns { username, first_name, last_name, is_admin, applications }
+   *   where applications is { jobId, jobId, ... }
    *
    * Throws NotFoundError if user not found.
    **/
@@ -138,6 +138,12 @@ class User {
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
 
+    const appRes = await db.query(
+      `SELECT job_id FROM applications
+      WHERE username = $1`,
+      [username]
+    )
+    user.applications = appRes.rows.map(a => a.job_id)
     return user;
   }
 
@@ -202,6 +208,43 @@ class User {
     const user = result.rows[0];
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
+  }
+
+  /** Create user's application for job
+   * 
+   * throw NotFound if the job or user doesn't exist
+   * 
+   * throw BadRequest if application already exists
+   * 
+   * returns undefined
+   */
+
+  static async applyToJob(username, jobId) {
+    const jobRes = await db.query(`
+          SELECT title FROM jobs
+          WHERE id = $1`,
+          [jobId])
+
+    if (!jobRes.rows[0]) throw new NotFoundError(`No job: ${jobId}`)
+
+    const userRes = await db.query(`
+        SELECT username FROM users
+        WHERE username = $1`,
+      [username])
+
+    if (!userRes.rows[0]) throw new NotFoundError(`No user: ${username}`)
+
+    const duplicateCheck = await db.query(`
+        SELECT username, job_id FROM applications
+        WHERE username = $1 AND job_id = $2`,
+      [username, jobId])
+
+    if (duplicateCheck.rows[0]) throw new BadRequestError(`Duplicate Application: ${username} has already applied to job ${jobId}`)
+
+    await db.query(`
+        INSERT INTO applications (username, job_id)
+        VALUES ($1, $2)`,
+      [username, jobId])
   }
 }
 

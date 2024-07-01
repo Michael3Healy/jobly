@@ -12,6 +12,7 @@ const {
   commonBeforeEach,
   commonAfterEach,
   commonAfterAll,
+  testJobIds
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -140,6 +141,7 @@ describe("get", function () {
       lastName: "U1L",
       email: "u1@email.com",
       isAdmin: false,
+      applications: []
     });
   });
 
@@ -208,6 +210,45 @@ describe("update", function () {
     }
   });
 });
+
+/************************************** applyToJob */
+
+describe("applyToJob", function() {
+  test('works', async function () {
+    await User.applyToJob('u1', testJobIds[0])
+    const res = await db.query(`
+        SELECT * FROM applications WHERE username='u1'`)
+    expect(res.rows).toEqual([{ job_id: testJobIds[0], username: 'u1'}])
+  })
+
+  test('no duplicate applications', async function() {
+    try {
+      await User.applyToJob('u1', testJobIds[0])
+      await User.applyToJob('u1', testJobIds[0])
+      fail()
+    } catch (err) {
+      expect (err instanceof BadRequestError).toBeTruthy();
+    }
+  })
+
+  test('not found if no such job', async function () {
+    try {
+      await User.applyToJob('u1', 0)
+      fail()
+    } catch(err) {
+      expect(err instanceof NotFoundError).toBeTruthy();
+    }
+  })
+
+  test('not found if no such user', async function () {
+    try {
+      await User.applyToJob('nope', testJobIds[0])
+      fail()
+    } catch(err) {
+      expect(err instanceof NotFoundError).toBeTruthy();
+    }
+  })
+})
 
 /************************************** remove */
 

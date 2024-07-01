@@ -26,7 +26,7 @@ describe('POST /jobs', function () {
 		const resp = await request(app).post('/jobs').send(newJob).set('authorization', `Bearer ${u1Token}`);
 		expect(resp.statusCode).toEqual(201);
 		expect(resp.body).toEqual({
-			job: newJob,
+			job: {...newJob, id: expect.any(Number)}
 		});
 	});
 

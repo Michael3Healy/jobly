@@ -1,11 +1,3 @@
-# Jobly Backend
+# Jobly
 
-This is the Express backend for Jobly, version 2.
-
-To run this:
-
-    node server.js
-    
-To run the tests:
-
-    jest -i
+This is the Express backend for Jobly, an API for a job searching platform

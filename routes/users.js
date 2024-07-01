@@ -5,7 +5,7 @@
 const jsonschema = require("jsonschema");
 
 const express = require("express");
-const { ensureLoggedIn, ensureAdminOrCorrectUser, ensureIsAdmin } = require("../middleware/auth");
+const { ensureAdminOrCorrectUser, ensureIsAdmin } = require("../middleware/auth");
 const { BadRequestError } = require("../expressError");
 const User = require("../models/user");
 const { createToken } = require("../helpers/tokens");
@@ -24,7 +24,7 @@ const router = express.Router();
  * This returns the newly created user and an authentication token for them:
  *  {user: { username, firstName, lastName, email, isAdmin }, token }
  *
- * Authorization required: login
+ * Authorization required: admin
  **/
 
 router.post("/", ensureIsAdmin, async function (req, res, next) {
@@ -48,7 +48,7 @@ router.post("/", ensureIsAdmin, async function (req, res, next) {
  *
  * Returns list of all users.
  *
- * Authorization required: login
+ * Authorization required: admin
  **/
 
 router.get("/", ensureIsAdmin, async function (req, res, next) {
@@ -63,9 +63,10 @@ router.get("/", ensureIsAdmin, async function (req, res, next) {
 
 /** GET /[username] => { user }
  *
- * Returns { username, firstName, lastName, isAdmin }
+ * Returns { username, firstName, lastName, isAdmin, applications }
+ *  where applications is [jobId, jobId, ...]
  *
- * Authorization required: login
+ * Authorization required: admin or correct user
  **/
 
 router.get("/:username", ensureAdminOrCorrectUser, async function (req, res, next) {
@@ -85,7 +86,7 @@ router.get("/:username", ensureAdminOrCorrectUser, async function (req, res, nex
  *
  * Returns { username, firstName, lastName, email, isAdmin }
  *
- * Authorization required: login
+ * Authorization required: admin or correct user
  **/
 
 router.patch("/:username", ensureAdminOrCorrectUser, async function (req, res, next) {
@@ -102,6 +103,21 @@ router.patch("/:username", ensureAdminOrCorrectUser, async function (req, res, n
     return next(err);
   }
 });
+
+/** POST /[username]/jobs/[id] => { applied: jobId }
+ * 
+ * Authorization required: admin or correct user
+ */
+
+router.post('/:username/jobs/:id', ensureAdminOrCorrectUser, async function (req, res, next) {
+  try {
+    const {username, id: jobId} = req.params
+    await User.applyToJob(username, jobId)
+    return res.json({applied: parseInt(jobId)})
+  } catch(err) {
+    return next(err)
+  }
+})
 
 
 /** DELETE /[username]  =>  { deleted: username }

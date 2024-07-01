@@ -12,8 +12,10 @@ const {
   commonAfterEach,
   commonAfterAll,
   u1Token,
-  u2Token
+  u2Token,
+  testJobIds
 } = require("./_testCommon");
+const { application } = require("express");
 
 beforeAll(commonBeforeAll);
 beforeEach(commonBeforeEach);
@@ -199,6 +201,7 @@ describe("GET /users/:username", function () {
         lastName: "U1L",
         email: "user1@user.com",
         isAdmin: true,
+        applications: []
       },
     });
   });
@@ -214,8 +217,25 @@ describe("GET /users/:username", function () {
         lastName: "U2L",
         email: "user2@user.com",
         isAdmin: false,
+        applications: []
       },
     })
+  });
+
+  test('works for user with apps', async function () {
+    await User.applyToJob('u1', testJobIds[0])
+    const resp = await request(app)
+        .get(`/users/u1`)
+        .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.body).toEqual({
+      user: {
+        username: "u1",
+        firstName: "U1F",
+        lastName: "U1L",
+        email: "user1@user.com",
+        isAdmin: true,
+        applications: [testJobIds[0]]
+      }})
   });
 
   test("unauth for incorrect user", async function () {
@@ -337,6 +357,51 @@ describe("PATCH /users/:username", () => {
     expect(isSuccessful).toBeTruthy();
   });
 });
+
+/************************************** POST /users/:username/jobs/:id */
+
+describe('POST /users/:username/jobs/:id', function () {
+  test('works for admins', async function () {
+    const resp = await request(app)
+          .post(`/users/u2/jobs/${testJobIds[0]}`)
+          .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.body).toEqual({ applied: testJobIds[0]})
+  })
+
+  test('works for correct user', async function () {
+    const resp = await request(app)
+          .post(`/users/u2/jobs/${testJobIds[0]}`)
+          .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.body).toEqual({ applied: testJobIds[0]})
+  })
+
+  test('unauth for incorrect user', async function () {
+    const resp = await request(app)
+          .post(`/users/u1/jobs/${testJobIds[0]}`)
+          .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(401);
+  })
+
+  test('unauth for anon', async function () {
+    const resp = await request(app)
+          .post(`/users/u1/jobs/${testJobIds[0]}`);
+    expect(resp.statusCode).toEqual(401);
+  })
+
+  test('not found for invalid username', async function () {
+    const resp = await request(app)
+        .post(`/users/nope/jobs/${testJobIds[0]}`)
+        .set('authorization', `Bearer ${u1Token}`);
+    expect(resp.statusCode).toEqual(404);
+  })
+
+  test('not found for invalid job id', async function () {
+    const resp = await request(app)
+        .post(`/users/u1/jobs/0`)
+        .set('authorization', `Bearer ${u1Token}`);
+    expect(resp.statusCode).toEqual(404);
+  })
+})
 
 /************************************** DELETE /users/:username */
 
