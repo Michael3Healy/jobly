@@ -111,6 +111,15 @@ describe("find", function () {
       }
     ])
   })
+
+  test('BadRequest if minEmployees > maxEmployees', async function() {
+    try {
+      await Company.find({minEmployees: 3, maxEmployees: 2})
+      fail()
+    } catch (err) {
+      expect(err instanceof BadRequestError).toBeTruthy()
+    }
+  });
 });
 
 /************************************** get */
